@@ -1,0 +1,146 @@
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const gravity = 0.6;
+let keys = {};
+
+let picturesTaken = 0;
+let hits = 0;
+const picturesNeeded = 5;
+
+const player = {
+  x: 50,
+  y: 300,
+  width: 30,
+  height: 40,
+  xSpeed: 0,
+  ySpeed: 0,
+  onGround: false
+};
+
+const ground = {
+  y: 350,
+  height: 50
+};
+
+let inspectors = [
+  { x: 500, y: 310, width: 30, height: 40, speed: 1.2 },
+  { x: 700, y: 310, width: 30, height: 40, speed: 1.0 }
+];
+
+// --- Controls ---
+document.addEventListener("keydown", e => keys[e.code] = true);
+document.addEventListener("keyup", e => keys[e.code] = false);
+
+// --- Game Loop ---
+function update() {
+  movement();
+  applyPhysics();
+  inspectorsMove();
+  collisions();
+  draw();
+  requestAnimationFrame(update);
+}
+
+// --- Player Movement ---
+function movement() {
+  if (keys["ArrowRight"]) player.xSpeed = 3;
+  else if (keys["ArrowLeft"]) player.xSpeed = -3;
+  else player.xSpeed = 0;
+
+  if (keys["Space"] && player.onGround) {
+    player.ySpeed = -12;
+    player.onGround = false;
+  }
+
+  if (keys["KeyP"]) takePicture();
+}
+
+// --- Physics ---
+function applyPhysics() {
+  player.ySpeed += gravity;
+  player.x += player.xSpeed;
+  player.y += player.ySpeed;
+
+  if (player.y + player.height >= ground.y) {
+    player.y = ground.y - player.height;
+    player.ySpeed = 0;
+    player.onGround = true;
+  }
+}
+
+// --- Inspectors chase the Site Admin ---
+function inspectorsMove() {
+  inspectors.forEach(i => {
+    if (i.x > player.x) i.x -= i.speed;
+    else i.x += i.speed;
+  });
+}
+
+// --- Take picture ---
+let pictureCooldown = false;
+function takePicture() {
+  if (!pictureCooldown) {
+    picturesTaken++;
+    document.getElementById("pictures").textContent = picturesTaken;
+    pictureCooldown = true;
+
+    if (picturesTaken >= picturesNeeded) winGame();
+
+    setTimeout(() => pictureCooldown = false, 500);
+  }
+}
+
+// --- Collision Detection ---
+function collisions() {
+  inspectors.forEach(i => {
+    if (
+      player.x < i.x + i.width &&
+      player.x + player.width > i.x &&
+      player.y < i.y + i.height &&
+      player.y + player.height > i.y
+    ) {
+      hitInspector();
+      i.x += 50; // push inspector away
+    }
+  });
+}
+
+function hitInspector() {
+  hits++;
+  document.getElementById("hits").textContent = hits;
+
+  if (hits >= 3) loseGame();
+}
+
+// --- Draw Everything ---
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Ground
+  ctx.fillStyle = "#555";
+  ctx.fillRect(0, ground.y, canvas.width, ground.height);
+
+  // Player (Site Admin)
+  ctx.fillStyle = "#0077cc";
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+
+  // Inspectors
+  ctx.fillStyle = "red";
+  inspectors.forEach(i =>
+    ctx.fillRect(i.x, i.y, i.width, i.height)
+  );
+}
+
+// --- Win / Lose ---
+function winGame() {
+  alert("Mission Complete! Safety walk finished.");
+  location.reload();
+}
+
+function loseGame() {
+  alert("Mission Failed! Inspectors stopped the Site Admin.");
+  location.reload();
+}
+
+update();
